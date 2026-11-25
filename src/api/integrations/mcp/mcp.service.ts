@@ -71,10 +71,10 @@ export class McpService {
     }
 
     try {
-      const mcp = this.createServer();
+      (req as any).auth = authInfo;
+      const mcp = this.createServer(authInfo);
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       await mcp.connect(transport);
-      (req as any).auth = authInfo;
       res.on('close', () => {
         transport.close().catch(() => undefined);
         mcp.close().catch(() => undefined);
@@ -87,7 +87,7 @@ export class McpService {
     }
   }
 
-  private createServer() {
+  private createServer(authInfo: AuthInfo) {
     const server: any = new McpServer(
       { name: 'Evolution API MCP', version: '2.3.8' },
       {
@@ -96,6 +96,14 @@ export class McpService {
         maxToolInputElements: 200,
       },
     );
+    const registerTool = (
+      name: string,
+      config: unknown,
+      handler: (args: any, extra: ToolExtra) => Promise<CallToolResult>,
+    ) =>
+      server.registerTool(name, config, (args: any, extra?: ToolExtra) =>
+        handler(args, { ...(extra || {}), authInfo: extra?.authInfo || authInfo }),
+      );
 
     const readAnnotations: ToolAnnotations = {
       readOnlyHint: true,
@@ -110,7 +118,7 @@ export class McpService {
       openWorldHint: true,
     };
 
-    server.registerTool(
+    registerTool(
       'list_instances',
       {
         description: 'List Evolution instances approved for this MCP connection.',
@@ -120,7 +128,7 @@ export class McpService {
         this.runTool('list_instances', extra, 'evolution:read', async () => this.listInstances(extra)),
     );
 
-    server.registerTool(
+    registerTool(
       'get_instance_status',
       {
         description: 'Read the connection status of an approved Evolution instance.',
@@ -131,7 +139,7 @@ export class McpService {
         this.runTool('get_instance_status', extra, 'evolution:read', () => this.getInstanceStatus(extra, instanceName)),
     );
 
-    server.registerTool(
+    registerTool(
       'list_contacts',
       {
         description: 'List contacts for an approved instance with bounded pagination.',
@@ -150,7 +158,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'list_chats',
       {
         description: 'List chats for an approved instance with bounded pagination.',
@@ -169,7 +177,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'list_messages',
       {
         description: 'List stored messages for an approved instance with bounded pagination.',
@@ -188,7 +196,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'list_groups',
       {
         description: 'List groups for an approved instance.',
@@ -203,7 +211,7 @@ export class McpService {
         }),
     );
 
-    server.registerTool(
+    registerTool(
       'get_group',
       {
         description: 'Read group metadata and participants.',
@@ -218,7 +226,7 @@ export class McpService {
         }),
     );
 
-    server.registerTool(
+    registerTool(
       'send_text_message',
       {
         description: 'Send one text message. Always provide a stable idempotencyKey.',
@@ -238,7 +246,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'send_media_message',
       {
         description: 'Send image, document, video, audio, or PTV media from an HTTPS URL or bounded base64.',
@@ -273,7 +281,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'send_reaction',
       {
         description: 'React to an existing WhatsApp message.',
@@ -304,7 +312,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'send_poll',
       {
         description: 'Send a poll to a WhatsApp contact or group.',
@@ -326,7 +334,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'set_presence',
       {
         description: 'Set online, offline, composing, recording, or paused presence.',
@@ -345,7 +353,7 @@ export class McpService {
         }),
     );
 
-    server.registerTool(
+    registerTool(
       'create_group',
       {
         description: 'Create a WhatsApp group.',
@@ -371,7 +379,7 @@ export class McpService {
         ),
     );
 
-    server.registerTool(
+    registerTool(
       'update_group_participants',
       {
         description: 'Add, remove, promote, or demote group participants.',
