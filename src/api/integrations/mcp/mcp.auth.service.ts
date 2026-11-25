@@ -136,7 +136,7 @@ export class McpAuthService {
     if (input.codeChallengeMethod !== 'S256' || !input.codeChallenge) {
       badRequest('PKCE S256 is required');
     }
-    if (input.resource && input.resource !== this.publicUrl()) {
+    if (input.resource && input.resource.replace(/\/+$/, '') !== this.publicUrl()) {
       badRequest('resource does not match the MCP server');
     }
 
