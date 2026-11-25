@@ -111,6 +111,124 @@ model Instance {
   N8nSetting              N8nSetting[]
   Evoai                   Evoai[]
   EvoaiSetting            EvoaiSetting?
+  McpInstancePermissions  McpConnectionInstance[]
+}
+
+model McpClient {
+  id               String          @id @default(cuid())
+  clientId         String          @unique
+  clientSecretHash String?
+  clientName       String          @db.VarChar(255)
+  redirectUris     Json
+  createdAt        DateTime        @default(now()) @db.Timestamp
+  updatedAt        DateTime        @updatedAt @db.Timestamp
+  connections      McpConnection[]
+}
+
+model McpConnection {
+  id                 String                  @id @default(cuid())
+  clientId           String
+  status             String                  @default("pending") @db.VarChar(30)
+  scopes             Json
+  createdAt          DateTime                @default(now()) @db.Timestamp
+  approvedAt         DateTime?               @db.Timestamp
+  revokedAt          DateTime?               @db.Timestamp
+  lastUsedAt         DateTime?               @db.Timestamp
+  client             McpClient               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  instances          McpConnectionInstance[]
+  authorizationCodes McpAuthorizationCode[]
+  accessTokens       McpAccessToken[]
+  refreshTokens      McpRefreshToken[]
+  idempotencyKeys    McpIdempotencyKey[]
+  auditEvents        McpAuditEvent[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model McpConnectionInstance {
+  id           String        @id @default(cuid())
+  connectionId String
+  instanceId   String
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  instance     Instance      @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, instanceId])
+  @@index([instanceId])
+}
+
+model McpAuthorizationCode {
+  id            String        @id @default(cuid())
+  codeHash      String        @unique
+  connectionId  String
+  redirectUri   String
+  codeChallenge String
+  scopes        Json
+  expiresAt     DateTime      @db.Timestamp
+  usedAt        DateTime?     @db.Timestamp
+  connection    McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([expiresAt])
+}
+
+model McpAccessToken {
+  id           String        @id @default(cuid())
+  tokenHash    String        @unique
+  connectionId String
+  expiresAt    DateTime      @db.Timestamp
+  revokedAt    DateTime?     @db.Timestamp
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([expiresAt])
+}
+
+model McpRefreshToken {
+  id           String        @id @default(cuid())
+  tokenHash    String        @unique
+  connectionId String
+  expiresAt    DateTime      @db.Timestamp
+  revokedAt    DateTime?     @db.Timestamp
+  rotatedAt    DateTime?      @db.Timestamp
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([expiresAt])
+}
+
+model McpIdempotencyKey {
+  id           String        @id @default(cuid())
+  connectionId String
+  instanceName String        @db.VarChar(255)
+  toolName     String        @db.VarChar(100)
+  keyHash      String        @db.VarChar(128)
+  requestHash  String        @db.VarChar(128)
+  result       Json?
+  status       String        @default("completed") @db.VarChar(30)
+  createdAt    DateTime      @default(now()) @db.Timestamp
+  expiresAt    DateTime      @db.Timestamp
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, instanceName, toolName, keyHash])
+  @@index([expiresAt])
+}
+
+model McpAuditEvent {
+  id           String        @id @default(cuid())
+  connectionId String
+  clientId     String
+  instanceName String?       @db.VarChar(255)
+  toolName     String        @db.VarChar(100)
+  status       String        @db.VarChar(30)
+  durationMs   Int?
+  errorCode    String?       @db.VarChar(100)
+  requestHash  String?       @db.VarChar(128)
+  createdAt    DateTime      @default(now()) @db.Timestamp
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, createdAt])
+  @@index([clientId, createdAt])
 }
 
 model Session {

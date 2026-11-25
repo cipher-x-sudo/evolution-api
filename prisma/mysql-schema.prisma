@@ -111,6 +111,7 @@ model Instance {
   Evoai                   Evoai[]
   EvoaiSetting            EvoaiSetting?
   Pusher                  Pusher?
+  McpInstancePermissions  McpConnectionInstance[]
 }
 
 model Session {
@@ -119,6 +120,106 @@ model Session {
   creds     String?  @db.Text
   createdAt DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @db.Timestamp
   Instance  Instance @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model McpClient {
+  id               String          @id @default(cuid())
+  clientId         String          @unique
+  clientSecretHash String?
+  clientName       String
+  redirectUris     Json
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  connections      McpConnection[]
+}
+
+model McpConnection {
+  id                 String                  @id @default(cuid())
+  clientId           String
+  status             String                  @default("pending")
+  scopes             Json
+  createdAt          DateTime                @default(now())
+  approvedAt         DateTime?
+  revokedAt          DateTime?
+  lastUsedAt         DateTime?
+  client             McpClient               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  instances          McpConnectionInstance[]
+  authorizationCodes McpAuthorizationCode[]
+  accessTokens       McpAccessToken[]
+  refreshTokens      McpRefreshToken[]
+  idempotencyKeys    McpIdempotencyKey[]
+  auditEvents        McpAuditEvent[]
+}
+
+model McpConnectionInstance {
+  id           String        @id @default(cuid())
+  connectionId String
+  instanceId   String
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  instance     Instance      @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, instanceId])
+}
+
+model McpAuthorizationCode {
+  id            String        @id @default(cuid())
+  codeHash      String        @unique
+  connectionId  String
+  redirectUri   String        @db.VarChar(2048)
+  codeChallenge String
+  scopes        Json
+  expiresAt     DateTime
+  usedAt        DateTime?
+  connection    McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+}
+
+model McpAccessToken {
+  id           String        @id @default(cuid())
+  tokenHash    String        @unique
+  connectionId String
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+}
+
+model McpRefreshToken {
+  id           String        @id @default(cuid())
+  tokenHash    String        @unique
+  connectionId String
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  rotatedAt    DateTime?
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+}
+
+model McpIdempotencyKey {
+  id           String        @id @default(cuid())
+  connectionId String
+  instanceName String
+  toolName     String
+  keyHash      String
+  requestHash  String
+  result       Json?
+  status       String        @default("completed")
+  createdAt    DateTime      @default(now())
+  expiresAt    DateTime
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, instanceName, toolName, keyHash])
+}
+
+model McpAuditEvent {
+  id           String        @id @default(cuid())
+  connectionId String
+  clientId     String
+  instanceName String?
+  toolName     String
+  status       String
+  durationMs   Int?
+  errorCode    String?
+  requestHash  String?
+  createdAt    DateTime      @default(now())
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 }
 
 model Chat {

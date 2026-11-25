@@ -4,8 +4,9 @@ import Telemetry from '@api/guards/telemetry.guard';
 import { ChannelRouter } from '@api/integrations/channel/channel.router';
 import { ChatbotRouter } from '@api/integrations/chatbot/chatbot.router';
 import { EventRouter } from '@api/integrations/event/event.router';
+import { McpRouter } from '@api/integrations/mcp/mcp.router';
 import { StorageRouter } from '@api/integrations/storage/storage.router';
-import { waMonitor } from '@api/server.module';
+import { mcpService, waMonitor } from '@api/server.module';
 import { configService, Database, Facebook } from '@config/env.config';
 import { fetchLatestWaWebVersion } from '@utils/fetchLatestWaWebVersion';
 import { NextFunction, Request, Response, Router } from 'express';
@@ -214,6 +215,7 @@ router
       facebookUserToken: facebookConfig.USER_TOKEN,
     });
   })
+  .use('', new McpRouter(mcpService).router)
   .use('/instance', new InstanceRouter(configService, ...guards).router)
   .use('/message', new MessageRouter(...guards).router)
   .use('/call', new CallRouter(...guards).router)

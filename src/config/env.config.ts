@@ -389,6 +389,17 @@ export type EventEmitter = {
   MAX_LISTENERS: number;
 };
 
+export type Mcp = {
+  ENABLED: boolean;
+  PUBLIC_URL: string;
+  ACCESS_TOKEN_TTL: number;
+  REFRESH_TOKEN_TTL: number;
+  AUTH_CODE_TTL: number;
+  MAX_MEDIA_BYTES: number;
+  SEND_RATE_LIMIT: number;
+  READ_RATE_LIMIT: number;
+};
+
 export type Production = boolean;
 
 export interface Env {
@@ -428,6 +439,7 @@ export interface Env {
   FACEBOOK: Facebook;
   SENTRY: Sentry;
   EVENT_EMITTER: EventEmitter;
+  MCP: Mcp;
   PRODUCTION?: Production;
 }
 
@@ -902,6 +914,16 @@ export class ConfigService {
       },
       EVENT_EMITTER: {
         MAX_LISTENERS: Number.parseInt(process.env?.EVENT_EMITTER_MAX_LISTENERS) || 50,
+      },
+      MCP: {
+        ENABLED: process.env?.MCP_ENABLED === 'true',
+        PUBLIC_URL: process.env?.MCP_PUBLIC_URL || '',
+        ACCESS_TOKEN_TTL: Number.parseInt(process.env?.MCP_ACCESS_TOKEN_TTL) || 3600,
+        REFRESH_TOKEN_TTL: Number.parseInt(process.env?.MCP_REFRESH_TOKEN_TTL) || 2592000,
+        AUTH_CODE_TTL: Number.parseInt(process.env?.MCP_AUTH_CODE_TTL) || 300,
+        MAX_MEDIA_BYTES: Number.parseInt(process.env?.MCP_MAX_MEDIA_BYTES) || 16777216,
+        SEND_RATE_LIMIT: Number.parseInt(process.env?.MCP_SEND_RATE_LIMIT) || 30,
+        READ_RATE_LIMIT: Number.parseInt(process.env?.MCP_READ_RATE_LIMIT) || 100,
       },
     };
   }
